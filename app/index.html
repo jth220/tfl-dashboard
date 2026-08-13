@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>TfL Station Board</title>
+
+    <style>
+        :root {
+            --page-bg: #f4f1df;
+            --board-bg: #1f1f1f;
+            --board-panel: #2f2f2f;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --board-yellow: #ffd800;
+            --live-red: #ff4b4b;
+            --tfl-blue: #0019a8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #faf8e8 0%, var(--page-bg) 55%);
+            color: var(--text-main);
+            font-family: Arial, sans-serif;
+        }
+
+        .page {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 28px 20px 48px;
+        }
+
+        h1 {
+            text-align: center;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 32px;
+            letter-spacing: 1px;
+            margin: 0 0 24px;
+        }
+
+        .search-panel {
+            position: relative;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 18px;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            font-size: 15px;
+            background: white;
+        }
+
+        input:focus {
+            border-color: var(--tfl-blue);
+            box-shadow: 0 0 0 3px rgba(0, 25, 168, 0.12);
+            outline: none;
+        }
+
+        .search-results {
+            position: absolute;
+            z-index: 10;
+            top: 76px;
+            left: 16px;
+            right: 16px;
+            max-height: 280px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+        }
+
+        .search-results[hidden] { display: none; }
+
+        .search-result {
+            width: 100%;
+            padding: 11px 14px;
+            border: 0;
+            border-bottom: 1px solid #eef0f3;
+            background: white;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .search-result:hover,
+        .search-result.active { background: #eef2ff; }
+        .search-result-name { display: block; font-weight: 700; }
+        .search-result-lines { display: block; margin-top: 3px; color: var(--text-muted); font-size: 12px; }
+
+        #metadata {
+            margin: 12px 2px 0;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .live-text {
+            color: var(--live-red);
+            letter-spacing: 0.8px;
+        }
+
+        .all-line-label {
+        text-align: center;
+        font-weight: 800;
+        text-transform: capitalize;
+        margin: 14px 0 8px;
+        font-size: 15px;
+        letter-spacing: 0.3px;
+
+        }
+        .line-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 0 0 24px;
+        }
+
+        .line-tab {
+            padding: 9px 14px;
+            border: 0;
+            border-radius: 999px;
+            background: white;
+            color: #111827;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 5px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .line-tab.active {
+            background: #111827;
+            color: white;
+        }
+
+        .line-section {
+            margin-bottom: 34px;
+        }
+
+        .line-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0 0 14px;
+        }
+
+        .line-heading h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .board-line-label {
+            color: white;
+            font-family: Arial, sans-serif;
+            font-weight: 800;
+            text-align: center;
+            text-transform: capitalize;
+            margin: 2px 0 10px;
+            letter-spacing: 0.4px;
+        }
+
+        .live-badge {
+            background: white;
+            color: var(--live-red);
+            padding: 8px 24px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: Arial, sans-serif;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .platform {
+            margin-bottom: 24px;
+        }
+
+        .platform-header {
+            margin-bottom: 8px;
+            font-family: "Courier New", monospace;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .arrival-board {
+            background: var(--board-bg);
+            border-radius: 5px;
+            padding: 12px 18px;
+            box-shadow: 0 14px 26px rgba(0, 0, 0, 0.18);
+            font-family: "Courier New", monospace;
+            color: var(--board-yellow);
+        }
+
+        .train-row {
+            display: grid;
+            grid-template-columns: 34px 1fr auto;
+            align-items: center;
+            gap: 12px;
+            min-height: 43px;
+            font-size: 22px;
+        }
+
+        .train-index {
+            font-weight: 700;
+        }
+
+        .destination {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .eta {
+            background: var(--board-panel);
+            padding: 7px 16px;
+            border-radius: 4px;
+            min-width: 92px;
+            text-align: center;
+        }
+
+        .empty-state {
+            padding: 18px;
+            color: var(--board-yellow);
+            font-family: "Courier New", monospace;
+        }
+
+        .page-state {
+            padding: 22px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.7);
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .loading-state::before {
+            content: "";
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 8px;
+            border: 2px solid #c7cad1;
+            border-top-color: var(--tfl-blue);
+            border-radius: 50%;
+            vertical-align: -2px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .line-title {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            text-transform: capitalize;
+            margin: 10px 0 22px;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 600px) {
+            .page { padding: 18px 12px 36px; }
+            h1 { font-size: 26px; margin-bottom: 16px; }
+            .search-panel { padding: 13px; }
+            .search-results { left: 13px; right: 13px; top: 73px; }
+            .line-tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding-bottom: 6px; }
+            .line-tab { flex: 0 0 auto; }
+            .arrival-board { padding: 10px 11px; }
+            .train-row {
+                font-size: 16px;
+                grid-template-columns: 22px minmax(0, 1fr) auto;
+                gap: 7px;
+            }
+
+            .eta {
+                min-width: 74px;
+                padding: 6px 10px;
+            }
+
+            .platform-header {
+                font-size: 16px;
+            }
+        }
+
+        .footer-credit {
+        margin-top: 48px;
+        padding: 24px 0;
+        text-align: center;
+        font-size: 13px;
+        color: var(--text-muted);
+        border-top: 1px solid rgba(0,0,0,.08);
+        }
+
+        .footer-credit a {
+            color: var(--tfl-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer-credit a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <h1 id="station-title">TfL Station Board</h1>
+
+        <section class="search-panel">
+            <label for="station-search">Search Underground stations</label>
+            <input
+                id="station-search"
+                type="search"
+                placeholder="Start typing a station name..."
+                autocomplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="station-results"
+            />
+            <div id="station-results" class="search-results" role="listbox" hidden></div>
+            <p id="metadata">Loading available stations...</p>
+        </section>
+
+        <nav id="line-tabs" class="line-tabs"></nav>
+
+        <section id="board"></section>
+
+        <footer class="footer-credit">
+            UI inspiration and arrival board design inspired by
+            <a href="https://www.benjames.io/" target="_blank" rel="noopener noreferrer">
+            Ben James.
+            </a>
+            Backend architecture, tracking system and analytics developed independently.
+        </footer>
+    </main>
+
+    <script>
+    const API_BASE_URL = "http://127.0.0.1:8000";
+
+    let allStations = [];
+    let stationsById = {};
+    let stationsByName = {};
+    let selectedStationId = null;
+    let selectedLineId = "all";
+    let visibleResults = [];
+    let activeResultIndex = -1;
+    let refreshTimer = null;
+    let boardRequestVersion = 0;
+    const AUTO_REFRESH_MS = 30000;
+
+
+    function formatLineName(name) {
+    if (!name) return "";
+
+    return name
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+}
+
+    async function loadStations() {
+        const metadata = document.getElementById("metadata");
+        const board = document.getElementById("board");
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/stations`);
+            const result = await response.json();
+
+            if (result.status !== "ok") {
+                throw new Error(result.message || "Could not load stations.");
+            }
+
+            allStations = result.data;
+            stationsById = Object.fromEntries(
+                allStations.map(station => [station.station_id, station])
+            );
+            stationsByName = Object.fromEntries(
+                allStations.map(station => [station.station_name.toLocaleLowerCase(), station])
+            );
+
+            metadata.textContent = `Search ${allStations.length} Underground stations.`;
+            showPageState("Choose a station to view arrivals.");
+        } catch (error) {
+            console.error(error);
+            metadata.textContent = "Could not load the station catalogue.";
+            showPageState("Station search is currently unavailable.");
+        }
+    }
+
+    function showPageState(message, loading = false) {
+        document.getElementById("board").innerHTML =
+            `<div class="page-state${loading ? " loading-state" : ""}">${message}</div>`;
+    }
+
+    function updateSearchResults(query) {
+        const results = document.getElementById("station-results");
+        const normalized = query.trim().toLocaleLowerCase();
+        activeResultIndex = -1;
+
+        if (!normalized) {
+            closeSearchResults();
+            return;
+        }
+
+        visibleResults = allStations
+            .filter(station => station.station_name.toLocaleLowerCase().includes(normalized))
+            .slice(0, 8);
+        results.innerHTML = "";
+
+        visibleResults.forEach(station => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "search-result";
+            button.setAttribute("role", "option");
+            button.innerHTML = `<span class="search-result-name">${station.station_name}</span><span class="search-result-lines">${station.lines.map(line => line.line_name).join(" · ")}</span>`;
+            button.addEventListener("mousedown", event => {
+                event.preventDefault();
+                selectStation(station);
+            });
+            results.appendChild(button);
+        });
+
+        results.hidden = visibleResults.length === 0;
+        document.getElementById("station-search").setAttribute("aria-expanded", String(!results.hidden));
+    }
+
+    function closeSearchResults() {
+        document.getElementById("station-results").hidden = true;
+        document.getElementById("station-search").setAttribute("aria-expanded", "false");
+    }
+
+    function selectStation(station) {
+        document.getElementById("station-search").value = station.station_name;
+        selectedStationId = station.station_id;
+        selectedLineId = "all";
+        closeSearchResults();
+        renderLineTabs();
+        loadStationBoards("all");
+        startAutoRefresh();
+    }
+
+    function renderLineTabs() {
+        const tabs = document.getElementById("line-tabs");
+        const station = stationsById[selectedStationId];
+
+        tabs.innerHTML = "";
+
+        if (!station) return;
+
+        tabs.appendChild(createLineTab("all", "All"));
+
+        station.lines.forEach(line => {
+            tabs.appendChild(createLineTab(line.line_id, line.line_name));
+        });
+    }
+
+    function createLineTab(lineId, label) {
+        const button = document.createElement("button");
+        button.className = "line-tab";
+        button.textContent = label;
+
+        if (lineId === selectedLineId) {
+            button.classList.add("active");
+        }
+
+        button.addEventListener("click", () => {
+            loadStationBoards(lineId);
+        });
+
+        return button;
+    }
+
+    async function loadStationBoards(lineId = "all", isRefresh = false) {
+        selectedLineId = lineId;
+        const requestVersion = ++boardRequestVersion;
+
+        const station = stationsById[selectedStationId];
+        const board = document.getElementById("board");
+        const title = document.getElementById("station-title");
+        const metadata = document.getElementById("metadata");
+
+        if (!station) return;
+
+        renderLineTabs();
+
+        title.textContent = station.station_name;
+        if (!isRefresh) showPageState("Loading arrivals...", true);
+        metadata.textContent = isRefresh ? "Refreshing arrivals..." : "Loading arrivals...";
+
+        const linesToLoad =
+            lineId === "all"
+                ? station.lines
+                : station.lines.filter(line => line.line_id === lineId);
+
+        const loadedBoards = [];
+        const failedBoards = [];
+
+        for (const line of linesToLoad) {
+            const result = await fetchBoard(station.station_id, line.line_id);
+
+            if (requestVersion !== boardRequestVersion || station.station_id !== selectedStationId) return;
+
+            if (result.status === "ok") {
+                loadedBoards.push(result.data);
+                const fallback = result.data.cache_status === "stale_fallback" ? " · stale cache bypassed" : "";
+                metadata.innerHTML = `<strong class="live-text">${result.data.source.toUpperCase()}</strong> · Updated ${formatUpdatedAt(result.data.updated_at)}${fallback}`;
+            } else {
+                failedBoards.push({line, message: result.message});
+            }
+        }
+
+        board.innerHTML = "";
+
+        if (lineId === "all") {
+            renderAllLinesGroupedByPlatform(loadedBoards);
+        } else {
+            loadedBoards.forEach(data => renderLineBoard(data));
+        }
+
+        failedBoards.forEach(item =>
+            renderError(item.line.line_name, item.message || "Could not load arrivals.")
+        );
+    }
+
+    function startAutoRefresh() {
+        clearInterval(refreshTimer);
+        refreshTimer = setInterval(() => {
+            if (selectedStationId && !document.hidden) loadStationBoards(selectedLineId, true);
+        }, AUTO_REFRESH_MS);
+    }
+
+    function stopAutoRefresh() {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+    }
+
+    function formatUpdatedAt(value) {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+            ? "just now"
+            : date.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+    }
+
+    async function fetchBoard(stationId, lineId) {
+        const url =
+            `${API_BASE_URL}/arrivals?station_id=${encodeURIComponent(stationId)}&line_id=${encodeURIComponent(lineId)}`;
+
+        try {
+            const response = await fetch(url);
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return {
+                status: "error",
+                message: "Could not load station board."
+            };
+        }
+    }
+
+    function parsePlatform(platformName) {
+        const parts = platformName.split(" - ");
+
+        return {
+            direction: parts[0] || "Unknown direction",
+            platform: parts[1] || platformName,
+            key: `${parts[0] || "Unknown direction"}|${parts[1] || platformName}`
+        };
+    }
+
+    function renderAllLinesGroupedByPlatform(lineBoards) {
+        const board = document.getElementById("board");
+        const grouped = {};
+
+        lineBoards.forEach(data => {
+            data.platforms.forEach(platform => {
+                const parsed = parsePlatform(platform.platform_name);
+
+                if (!grouped[parsed.key]) {
+                    grouped[parsed.key] = {
+                        direction: parsed.direction,
+                        platform: parsed.platform,
+                        lines: []
+                    };
+                }
+
+                grouped[parsed.key].lines.push({
+                    line_id: data.line_id,
+                    line_name: data.line_name,
+                    trains: platform.trains || []
+                });
+            });
+        });
+
+        if (Object.keys(grouped).length === 0) {
+            board.innerHTML = '<div class="empty-state">No arrivals currently shown.</div>';
+            return;
+        }
+
+        Object.values(grouped).forEach(platformGroup => {
+            const platformSection = document.createElement("section");
+            platformSection.className = "platform";
+
+            const platformHeader = document.createElement("div");
+            platformHeader.className = "platform-header";
+            platformHeader.textContent =
+                `${platformGroup.direction} - ${platformGroup.platform}`;
+
+            platformSection.appendChild(platformHeader);
+
+            platformGroup.lines.forEach(line => {
+                const arrivalBoard = document.createElement("div");
+                arrivalBoard.className = "arrival-board";
+
+                const lineLabel = document.createElement("div");
+                lineLabel.className = "board-line-label";
+                lineLabel.textContent = formatLineName(line.line_name);
+
+                arrivalBoard.appendChild(lineLabel);
+
+                if (!line.trains || line.trains.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "empty-state";
+                    empty.textContent = "No arrivals currently shown.";
+                    arrivalBoard.appendChild(empty);
+                }
+
+                line.trains.slice(0, 3).forEach((train, index) => {
+                    arrivalBoard.appendChild(createTrainRow(train, index));
+                });
+
+                platformSection.appendChild(arrivalBoard);
+            });
+
+            board.appendChild(platformSection);
+        });
+    }
+
+    function renderLineBoard(data) {
+        const board = document.getElementById("board");
+
+        const lineSection = document.createElement("section");
+        lineSection.className = "line-section";
+
+        const lineHeading = document.createElement("div");
+        lineHeading.className = "line-heading";
+
+        const lineTitle = document.createElement("div");
+        lineTitle.className = "line-title";
+        lineTitle.textContent = formatLineName(data.line_name);
+
+        lineSection.appendChild(lineTitle);
+
+        if (!data.platforms || data.platforms.length === 0) {
+            const arrivalBoard = document.createElement("div");
+            arrivalBoard.className = "arrival-board";
+            arrivalBoard.innerHTML = '<div class="empty-state">No arrivals currently shown.</div>';
+            lineSection.appendChild(arrivalBoard);
+        }
+
+        data.platforms.forEach(platform => {
+            const platformSection = document.createElement("section");
+            platformSection.className = "platform";
+
+            const platformHeader = document.createElement("div");
+            platformHeader.className = "platform-header";
+            platformHeader.textContent = platform.platform_name;
+
+            const arrivalBoard = document.createElement("div");
+            arrivalBoard.className = "arrival-board";
+
+            if (!platform.trains || platform.trains.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "empty-state";
+                empty.textContent = "No arrivals currently shown.";
+                arrivalBoard.appendChild(empty);
+            }
+
+            platform.trains.slice(0, 3).forEach((train, index) => {
+                arrivalBoard.appendChild(createTrainRow(train, index));
+            });
+
+            platformSection.appendChild(platformHeader);
+            platformSection.appendChild(arrivalBoard);
+            lineSection.appendChild(platformSection);
+        });
+
+        board.appendChild(lineSection);
+    }
+
+    function createTrainRow(train, index) {
+        const row = document.createElement("div");
+        row.className = "train-row";
+
+        const trainIndex = document.createElement("div");
+        trainIndex.className = "train-index";
+        trainIndex.textContent = index + 1;
+
+        const destination = document.createElement("div");
+        destination.className = "destination";
+        destination.textContent = train.destination;
+
+        const eta = document.createElement("div");
+        eta.className = "eta";
+        eta.textContent = formatEta(train.time_to_station_minutes);
+
+        row.appendChild(trainIndex);
+        row.appendChild(destination);
+        row.appendChild(eta);
+
+        return row;
+    }
+
+    function renderError(lineName, message) {
+        const board = document.getElementById("board");
+
+        const section = document.createElement("section");
+        section.className = "line-section";
+
+        section.innerHTML = `
+            <div class="line-heading">
+                <h2>${lineName}</h2>
+            </div>
+            <div class="arrival-board">
+                <div class="empty-state">${message}</div>
+            </div>
+        `;
+
+        board.appendChild(section);
+    }
+
+    function formatEta(minutes) {
+        if (minutes === 0 || minutes === "0") return "Due";
+        if (minutes === null || minutes === undefined) return "—";
+        return `${minutes} min`;
+    }
+
+    const stationSearch = document.getElementById("station-search");
+
+    stationSearch.addEventListener("input", event => {
+        selectedStationId = null;
+        selectedLineId = "all";
+        stopAutoRefresh();
+        boardRequestVersion += 1;
+        document.getElementById("line-tabs").innerHTML = "";
+        document.getElementById("station-title").textContent = "TfL Station Board";
+        document.getElementById("metadata").textContent =
+            "Choose a station from the search results.";
+        showPageState("Choose a station to view arrivals.");
+        updateSearchResults(event.target.value);
+    });
+
+    stationSearch.addEventListener("keydown", event => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            if (!visibleResults.length) return;
+            activeResultIndex = event.key === "ArrowDown"
+                ? (activeResultIndex + 1) % visibleResults.length
+                : (activeResultIndex - 1 + visibleResults.length) % visibleResults.length;
+            document.querySelectorAll(".search-result").forEach((item, index) =>
+                item.classList.toggle("active", index === activeResultIndex)
+            );
+        } else if (event.key === "Enter" && activeResultIndex >= 0) {
+            event.preventDefault();
+            selectStation(visibleResults[activeResultIndex]);
+        } else if (event.key === "Escape") {
+            closeSearchResults();
+        }
+    });
+
+    stationSearch.addEventListener("blur", () => setTimeout(closeSearchResults, 100));
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && selectedStationId) loadStationBoards(selectedLineId, true);
+    });
+
+    loadStations();
+</script>
+</body>
+</html>
