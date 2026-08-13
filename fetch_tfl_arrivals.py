@@ -1081,7 +1081,6 @@ def run_live_scope_tracker(
         )
 
             save_latest_tracker_snapshot(snapshot)
-            save_historical_tracker_snapshot(snapshot)
 
             old_snapshot = new_snapshot
 
@@ -1140,7 +1139,6 @@ def run_live_multi_scope_tracker(
             )
 
                 save_latest_tracker_snapshot(snapshot)
-                save_historical_tracker_snapshot(snapshot)
 
                 print(f"Saved latest tracker snapshot for {scope_key}")
 
@@ -1195,17 +1193,6 @@ def save_json(data: dict, filepath: Path):
         file.flush()
 
     temporary_filepath.replace(filepath)
-
-
-def save_historical_tracker_snapshot(snapshot: dict):
-    timestamp = snapshot["snapshot_timestamp"].replace(":", "-")
-    filepath = DATA_DIR / "history" / "snapshots" / f"snapshot_{timestamp}.json"
-    save_json(snapshot, filepath)
-
-
-
-
-
 
 
 '''
@@ -1744,10 +1731,11 @@ def flatten_station_scopes(tracked_stations):
 ------------Main---------------
 '''
 
-run_live_multi_scope_tracker(
-    TRACKING_SCOPES,
-    poll_interval=30
-)
+if __name__ == "__main__":
+    run_live_multi_scope_tracker(
+        TRACKING_SCOPES,
+        poll_interval=30
+    )
 
 """
 old_raw_result = requests_data(station_ids)
