@@ -7,6 +7,7 @@ from pathlib import Path
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tracking_scopes import TRACKING_SCOPES
+from src.config import DATA_DIR, tfl_request_params
 
 
 
@@ -18,6 +19,7 @@ def request_station_data(station_id: str) -> dict | None:
     try:
         response = requests.get(
             f"https://api.tfl.gov.uk/StopPoint/{station_id}/Arrivals",
+            params=tfl_request_params(),
             timeout=10
         )
 
@@ -189,7 +191,7 @@ def save_snapshot(snapshot_data : dict): #saves one snapshot at a time
 
 
     #Creating filepath
-    PROCESSED_DIR = Path("data/processed/snapshots") #Creates a path object relative to where the script is running.
+    PROCESSED_DIR = DATA_DIR / "processed" / "snapshots"
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True) #Creates the path relative to the script, if data/processed/snapshots does not exist.
 
     #So that we can save it on a windows system.
@@ -214,7 +216,7 @@ def load_snapshot(file_path): #Loading logic should be simple, this stage it onl
 
 
 def list_snapshots(): #Creates a list of filenames in our snapshot folder, sets up for future queue stacks.
-    SNAPSHOT_DIR = Path("data/processed/snapshots")
+    SNAPSHOT_DIR = DATA_DIR / "processed" / "snapshots"
     return list(SNAPSHOT_DIR.glob("*.json")) #Important to note, they return Windowpaths, which comes with different attributes, like .name, .stem etc.
 
 
@@ -223,7 +225,7 @@ def save_latest_tracker_snapshot(snapshot: dict):
     line_id = snapshot["line_id"]
 
     slug = make_scope_slug(station_id, line_id)
-    filepath = Path(f"data/live/{slug}_latest.json")
+    filepath = DATA_DIR / "live" / f"{slug}_latest.json"
 
     save_json(snapshot, filepath)
 
@@ -1186,14 +1188,18 @@ def build_tracker_snapshot(
 
 def save_json(data: dict, filepath: Path):
     filepath.parent.mkdir(parents=True, exist_ok=True)
+    temporary_filepath = filepath.with_suffix(filepath.suffix + ".tmp")
 
-    with open(filepath, "w", encoding="utf-8") as file:
+    with open(temporary_filepath, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4)
+        file.flush()
+
+    temporary_filepath.replace(filepath)
 
 
 def save_historical_tracker_snapshot(snapshot: dict):
     timestamp = snapshot["snapshot_timestamp"].replace(":", "-")
-    filepath = Path(f"data/history/snapshots/snapshot_{timestamp}.json")
+    filepath = DATA_DIR / "history" / "snapshots" / f"snapshot_{timestamp}.json"
     save_json(snapshot, filepath)
 
 

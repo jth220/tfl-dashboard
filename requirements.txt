@@ -1,8 +1,4 @@
-requests
-pandas
-streamlit
-python-dotenv
-time
-datetime
-pathlib
 fastapi
+python-dotenv
+requests
+uvicorn[standard]

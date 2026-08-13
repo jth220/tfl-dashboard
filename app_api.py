@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 import json
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -6,11 +7,12 @@ from pathlib import Path
 import requests
 from src.collection.request import request_station_data, request_tube_stop_points
 from src.collection.transform import grouping_logic, transform_snapshot
+from src.config import DATA_DIR, PROJECT_ROOT
 from tracking_scopes import TRACKING_SCOPES
 
 app = FastAPI()
 
-LATEST_TRACKER_PATH = Path("data/live/latest_tracker_states.json")
+LATEST_TRACKER_PATH = DATA_DIR / "live" / "latest_tracker_states.json"
 CACHE_STALE_AFTER_SECONDS = 90
 
 
@@ -24,9 +26,7 @@ def load_scope_snapshot(
 ):
     slug = make_scope_slug(station_id, line_id)
 
-    filepath = Path(
-        f"data/live/{slug}_latest.json"
-    )
+    filepath = DATA_DIR / "live" / f"{slug}_latest.json"
 
     if not filepath.exists():
         return None
@@ -42,19 +42,7 @@ def load_scope_snapshot(
 
 @app.get("/")
 def root():
-    return {
-        "message": "TfL Tracker API",
-        "routes": [
-            "/health",
-            "/tracker/latest",
-            "/tracker/latest/states",
-            "/tracker/latest/metadata",
-            "/station-board/latest",
-            "/arrivals",
-            "/stations",
-            "/tracking-scopes"
-        ]
-    }
+    return FileResponse(PROJECT_ROOT / "app" / "index.html")
 
 
 

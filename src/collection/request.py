@@ -1,5 +1,7 @@
 import requests
 
+from src.config import tfl_request_params
+
 
 TFL_API_BASE_URL = "https://api.tfl.gov.uk"
 
@@ -8,6 +10,7 @@ def request_station_data(station_id: str) -> dict | None:
     try:
         response = requests.get(
             f"{TFL_API_BASE_URL}/StopPoint/{station_id}/Arrivals",
+            params=tfl_request_params(),
             timeout=10,
         )
         response.raise_for_status()
@@ -36,7 +39,7 @@ def request_tube_stop_points() -> list[dict]:
     while True:
         response = requests.get(
             f"{TFL_API_BASE_URL}/StopPoint/Mode/tube",
-            params={"page": page},
+            params=tfl_request_params(page=page),
             timeout=20,
         )
         response.raise_for_status()

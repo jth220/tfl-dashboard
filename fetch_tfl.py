@@ -1,9 +1,10 @@
 import requests
 import json
+from src.config import tfl_request_params
 
 url = "https://api.tfl.gov.uk/Line/Mode/tube/Status" #Endpoint of interest
 
-response = requests.get(url)
+response = requests.get(url, params=tfl_request_params(), timeout=10)
 
 print("Status Code:", response.status_code)
 
